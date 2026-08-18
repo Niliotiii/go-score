@@ -4,7 +4,7 @@ import { InstallPrompt } from '../components/InstallBanner'
 export function HomeScreen({ onNew, onResume, hasSaved, isLandscape }) {
   return (
     <main
-      className={`flex h-full bg-goscore-bg ${
+      className={`flex min-h-[100dvh] bg-goscore-bg ${
         isLandscape
           ? 'flex-row items-center justify-center gap-8 px-7'
           : 'flex-col px-7'

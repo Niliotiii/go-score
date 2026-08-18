@@ -4,6 +4,7 @@ import { TeamColumn } from '../components/TeamColumn'
 import { ResetModal } from '../components/ResetModal'
 import { ScoreboardMenu } from '../components/ScoreboardMenu'
 import { HelpModal } from '../components/HelpModal'
+import { useWakeLock } from '../hooks/useWakeLock'
 
 export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
   const { teams, scores, sets, swipeUpEnabled, swapped } = state
@@ -12,6 +13,8 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
   const [showMenu, setShowMenu] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+
+  useWakeLock(true)
 
   const intervalRef = useRef(null)
   const stateRef = useRef(state)

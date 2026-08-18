@@ -23,7 +23,7 @@ export function SetupScreen({ onStart, onBack, isLandscape }) {
 
   return (
     <div
-      className="flex flex-col h-full bg-goscore-bg overflow-hidden"
+      className="flex flex-col min-h-[100dvh] bg-goscore-bg overflow-hidden"
       style={{
         paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
