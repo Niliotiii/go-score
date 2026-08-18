@@ -132,7 +132,9 @@ export function TeamColumn({
 
       <div
         ref={setsAreaRef}
-        className={`absolute flex gap-1.5 ${isLandscape ? 'top-1.5' : 'top-3.5'} touch-none`}
+        className={`absolute flex items-center gap-2 ${
+          isLandscape ? 'top-1.5 p-2' : 'top-2 p-3'
+        } touch-none`}
         onPointerDown={handleSetPointerDown}
         onPointerUp={handleSetPointerUp}
         onPointerCancel={handleSetPointerCancel}
@@ -151,7 +153,9 @@ export function TeamColumn({
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className={`w-2 h-2 rounded-full ${
+            className={`rounded-full ${
+              isLandscape ? 'w-3 h-3' : 'w-4 h-4'
+            } ${
               i < setsWon
                 ? 'bg-white/90'
                 : 'bg-white/15 border border-white/10'
