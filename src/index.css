@@ -35,7 +35,7 @@ body,
 
 body {
   font-family: var(--font-body);
-  background: var(--bg-dark);
+  background: var(--bg);
   color: var(--fg);
   -webkit-user-select: none;
   user-select: none;

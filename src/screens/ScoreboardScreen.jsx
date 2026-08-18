@@ -73,6 +73,8 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
       data-od-id="scoreboard-screen"
       aria-label="Placar da partida"
     >
+      <div className="fixed inset-0 bg-goscore-bg-dark -z-10" aria-hidden="true" />
+
       <TimerBar
         timer={timer}
         running={running}
