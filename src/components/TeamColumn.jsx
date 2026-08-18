@@ -118,7 +118,9 @@ export function TeamColumn({
         }
       }}
       data-od-id={`team-col-${team.name.toLowerCase().replace(/\s+/g, '-')}`}
-      className="flex-1 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer"
+      className={`flex-1 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer ${
+        isLandscape ? '' : 'pb-[env(safe-area-inset-bottom,0px)]'
+      }`}
       style={{ background: mixWithDark(team.color) }}
     >
       <div

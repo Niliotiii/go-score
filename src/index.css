@@ -28,13 +28,14 @@ html,
 body,
 #root {
   height: 100%;
+  min-height: 100dvh;
   width: 100%;
   overflow: hidden;
 }
 
 body {
   font-family: var(--font-body);
-  background: var(--bg);
+  background: var(--bg-dark);
   color: var(--fg);
   -webkit-user-select: none;
   user-select: none;

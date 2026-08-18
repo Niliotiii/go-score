@@ -68,16 +68,11 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
 
   return (
     <main
-      className="flex flex-col h-full bg-goscore-bg-dark text-goscore-fg-dark"
-      style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}
+      className="flex flex-col min-h-[100dvh] bg-goscore-bg-dark text-goscore-fg-dark"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       data-od-id="scoreboard-screen"
       aria-label="Placar da partida"
     >
-      <div className="fixed inset-0 bg-goscore-bg-dark -z-10" aria-hidden="true" />
-
       <TimerBar
         timer={timer}
         running={running}
