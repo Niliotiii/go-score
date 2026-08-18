@@ -1,0 +1,154 @@
+import { useEffect, useRef, useState } from 'react'
+import { TimerBar } from '../components/TimerBar'
+import { TeamColumn } from '../components/TeamColumn'
+import { ResetModal } from '../components/ResetModal'
+import { ScoreboardMenu } from '../components/ScoreboardMenu'
+
+export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
+  const { teams, scores, sets, swipeUpEnabled, swapped } = state
+  const [timer, setTimer] = useState(state.timer || 0)
+  const [running, setRunning] = useState(state.timerRunning || false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+
+  const intervalRef = useRef(null)
+  const stateRef = useRef(state)
+  const onUpdateRef = useRef(onUpdate)
+
+  useEffect(() => {
+    stateRef.current = state
+    onUpdateRef.current = onUpdate
+  })
+
+  useEffect(() => {
+    if (running) {
+      intervalRef.current = setInterval(() => {
+        setTimer((t) => {
+          const next = t + 1
+          onUpdateRef.current({ ...stateRef.current, timer: next, timerRunning: true })
+          return next
+        })
+      }, 1000)
+    } else {
+      clearInterval(intervalRef.current)
+      onUpdateRef.current({ ...stateRef.current, timer, timerRunning: false })
+    }
+    return () => clearInterval(intervalRef.current)
+  }, [running, timer])
+
+  function addScore(teamIdx, delta) {
+    const newScores = [...scores]
+    newScores[teamIdx] = Math.max(0, newScores[teamIdx] + delta)
+    onUpdate({ ...state, scores: newScores })
+  }
+
+  function changeSet(teamIdx, delta) {
+    const newSets = [...sets]
+    newSets[teamIdx] = Math.min(5, Math.max(0, newSets[teamIdx] + delta))
+    onUpdate({ ...state, sets: newSets })
+  }
+
+  function swapSides() {
+    onUpdate({ ...state, swapped: !swapped })
+  }
+
+  function resetAll() {
+    setTimer(0)
+    setRunning(false)
+    onUpdate({ ...state, scores: [0, 0], sets: [0, 0], timer: 0, timerRunning: false })
+  }
+
+  function toggleSwipeUp() {
+    onUpdate({ ...state, swipeUpEnabled: !swipeUpEnabled })
+  }
+
+  const order = swapped ? [1, 0] : [0, 1]
+
+  return (
+    <main
+      className="flex flex-col h-full bg-goscore-bg-dark text-goscore-fg-dark"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      data-od-id="scoreboard-screen"
+      aria-label="Placar da partida"
+    >
+      <header
+        className="flex items-center justify-between flex-shrink-0 h-11 px-4 border-b border-goscore-border-dark"
+        data-od-id="scoreboard-header"
+      >
+        <span className="text-[15px] font-semibold text-goscore-fg-dark">Placar</span>
+        <button
+          type="button"
+          onClick={() => setShowMenu(true)}
+          aria-label="Abrir menu de opcoes"
+          className="w-9 h-9 flex items-center justify-center rounded-sm bg-transparent text-goscore-fg-dark border-0 active:scale-95 transition-transform"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </header>
+
+      <TimerBar
+        timer={timer}
+        running={running}
+        onToggle={() => setRunning((r) => !r)}
+        onReset={() => {
+          setTimer(0)
+          setRunning(false)
+        }}
+        isLandscape={isLandscape}
+      />
+
+      <div className={`flex flex-1 overflow-hidden ${isLandscape ? 'flex-row' : 'flex-col'}`}>
+        <TeamColumn
+          team={teams[order[0]]}
+          score={scores[order[0]]}
+          setsWon={sets[order[0]]}
+          swipeUpEnabled={swipeUpEnabled}
+          onScore={(delta) => addScore(order[0], delta)}
+          onSetChange={(delta) => changeSet(order[0], delta)}
+          isLandscape={isLandscape}
+        />
+        <div className={`bg-white/5 self-stretch ${isLandscape ? 'w-px' : 'h-px'}`} aria-hidden="true" />
+        <TeamColumn
+          team={teams[order[1]]}
+          score={scores[order[1]]}
+          setsWon={sets[order[1]]}
+          swipeUpEnabled={swipeUpEnabled}
+          onScore={(delta) => addScore(order[1], delta)}
+          onSetChange={(delta) => changeSet(order[1], delta)}
+          isLandscape={isLandscape}
+        />
+      </div>
+
+      {showMenu && (
+        <ScoreboardMenu
+          swipeUpEnabled={swipeUpEnabled}
+          onToggleSwipeUp={() => {
+            toggleSwipeUp()
+            setShowMenu(false)
+          }}
+          onSwapSides={() => {
+            swapSides()
+            setShowMenu(false)
+          }}
+          onReset={() => {
+            setShowMenu(false)
+            setShowResetConfirm(true)
+          }}
+          onExit={() => {
+            onEnd()
+            setShowMenu(false)
+          }}
+          onClose={() => setShowMenu(false)}
+        />
+      )}
+
+      {showResetConfirm && (
+        <ResetModal onCancel={() => setShowResetConfirm(false)} onConfirm={() => { resetAll(); setShowResetConfirm(false) }} />
+      )}
+    </main>
+  )
+}

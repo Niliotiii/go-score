@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<title>GoScore</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M5 3h22l-2 22-9 4-9-4-2-22z' fill='%23141414'/%3E%3Cpath d='M11.5 23l4.5-14' stroke='%2340b85c' stroke-width='3' stroke-linecap='square'/%3E%3Cpath d='M16.5 23l4.5-14' stroke='%2340b85c' stroke-width='3' stroke-linecap='square'/%3E%3C/svg%3E"/>
+<style>
+:root {
+  --bg:      oklch(98% 0.005 250);
+  --surface: oklch(100% 0 0);
+  --fg:      oklch(15% 0.01 240);
+  --fg-secondary: oklch(35% 0.015 240);
+  --muted:   oklch(55% 0.012 240);
+  --border:  oklch(88% 0.006 240);
+  --accent:  oklch(62% 0.22 145);
+
+  --bg-dark:      oklch(10% 0.008 240);
+  --surface-dark: oklch(15% 0.01 240);
+  --fg-dark:      oklch(96% 0.003 240);
+  --muted-dark:   oklch(55% 0.01 240);
+  --border-dark:  oklch(22% 0.008 240);
+
+  --font-display: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono:    'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Interactive states (GPU-only: transform + opacity) ─── */
+button, [role="button"], [role="switch"] {
+  will-change: transform, opacity;
+}
+button:focus-visible, [role="button"]:focus-visible, [role="switch"]:focus-visible, [role="radio"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+button:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ─── Elements that animate (compositor hints) ─── */
+.gsap-flash { will-change: opacity; }
+.gsap-score { will-change: transform; }
+.gsap-knob  { will-change: transform; }
+.gsap-progress { will-change: transform; transform-origin: left center; }
+.gsap-screen { will-change: transform, opacity; }
+
+/* ─── Reduced motion: GSAP handles this in JS, but fallback ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Landscape orientation (mobile: max-height ≤ 500px + landscape) ─── */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* These rules use !important to override inline React styles where needed.
+     For most layout changes, the JS `isLandscape` hook adjusts inline styles directly. */
+
+  /* Modal: center vertically instead of bottom-sheet */
+  [data-od-id="reset-modal"] {
+    align-items: center !important;
+    padding: 16px !important;
+  }
+  [data-od-id="reset-modal"] > div {
+    border-radius: var(--radius-lg) !important;
+    max-height: calc(100vh - 32px) !important;
+    overflow-y: auto !important;
+  }
+}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js" crossorigin></script>
+<script src="https://unpkg.com/gsap@3.12.5/dist/gsap.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-type="module">
+
+/* ─── Motion config ─── */
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function dur(ms) { return REDUCED_MOTION ? 0 : ms / 1000; }
+
+/* ─── Landscape detection hook ─── */
+function useLandscape() {
+  const mq = React.useMemo(() => window.matchMedia('(orientation: landscape) and (max-height: 500px)'), []);
+  const [isLandscape, setIsLandscape] = React.useState(mq.matches);
+  React.useEffect(() => {
+    const handler = (e) => setIsLandscape(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [mq]);
+  return isLandscape;
+}
+
+/* ─── Constants ─── */
+const STORAGE_KEY = 'goscore_match_state';
+
+const TEAM_ICONS = [
+  '⚽', '🏀', '🏐', '🏈', '🎾', '🏓', '🏸', '⚾',
+  '🥊', '🏒', '🎯', '🏆', '⭐', '🔥', '💪', '🦁'
+];
+
+const PRESET_COLORS = [
+  '#d62839', '#f77f00', '#2a9d8f', '#1d3557',
+  '#7b2cbf', '#264653', '#e36414', '#457b9d',
+  '#06d6a0', '#ef476f', '#0096c7', '#003049'
+];
+
+/* ─── localStorage helpers ─── */
+function saveState(state) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+function clearState() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+}
+
+/* ─── GSAP button press helper ─── */
+function animatePress(el) {
+  if (!el || REDUCED_MOTION) return;
+  gsap.fromTo(el,
+    { scale: 1, y: 0 },
+    { scale: 0.96, y: 1, duration: dur(80), ease: 'power2.in',
+      yoyo: true, repeat: 1, overwrite: true }
+  );
+}
+
+/* ─── Styles (no CSS transitions — GSAP handles all motion) ─── */
+const S = {
+  /* ── Home ── */
+  homePage: {
+    display: 'flex', flexDirection: 'column',
+    height: '100%',
+    padding: 'calc(env(safe-area-inset-top, 0px) + 40px) 28px calc(env(safe-area-inset-bottom, 0px) + 40px)',
+    background: 'var(--bg)',
+    justifyContent: 'space-between',
+  },
+  homeTop: {
+    display: 'flex', flexDirection: 'column', gap: '10px',
+    paddingTop: '48px',
+  },
+  logoRow: {
+    display: 'flex', alignItems: 'center', gap: '10px',
+  },
+  logoMark: {
+    color: 'var(--fg)', flexShrink: 0,
+  },
+  logo: {
+    fontFamily: 'var(--font-display)', fontSize: '34px', fontWeight: 700,
+    letterSpacing: '-0.03em', lineHeight: 1.0, color: 'var(--fg)',
+  },
+  logoAccent: { color: 'var(--accent)' },
+  subtitle: {
+    fontSize: '15px', color: 'var(--fg-secondary)',
+    lineHeight: 1.55, maxWidth: '260px',
+  },
+  homeBottom: {
+    display: 'flex', flexDirection: 'column', gap: '10px',
+  },
+  ctaBtn: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+    width: '100%', height: '50px', borderRadius: 'var(--radius-md)',
+    background: 'var(--fg)', color: 'var(--bg)', border: 'none',
+    fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600,
+    letterSpacing: '0.01em', cursor: 'pointer',
+  },
+  resumeBtn: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+    width: '100%', height: '50px', borderRadius: 'var(--radius-md)',
+    background: 'transparent', color: 'var(--fg)', border: '1.5px solid var(--border)',
+    fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 500,
+    letterSpacing: '0.01em', cursor: 'pointer',
+  },
+
+  /* ── Setup ── */
+  setupPage: {
+    display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)',
+    padding: 'calc(16px + env(safe-area-inset-top, 0px)) 20px 0', overflow: 'hidden',
+  },
+  setupHeaderRow: {
+    display: 'flex', alignItems: 'center', gap: '10px',
+    marginBottom: '16px', flexShrink: 0,
+  },
+  backBtn: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: '36px', height: '36px', borderRadius: 'var(--radius-sm)',
+    background: 'transparent', border: 'none', cursor: 'pointer',
+    color: 'var(--fg)',
+  },
+  setupTitle: {
+    fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600,
+    letterSpacing: '-0.015em', lineHeight: 1.2,
+  },
+  stepCounter: {
+    marginLeft: 'auto', fontSize: '13px', fontWeight: 500,
+    color: 'var(--muted)', fontFamily: 'var(--font-mono)',
+    letterSpacing: '0.02em',
+  },
+  progressTrack: {
+    width: '100%', height: '2px', background: 'var(--border)',
+    borderRadius: '1px', marginBottom: '20px', flexShrink: 0, overflow: 'hidden',
+  },
+  progressFill: {
+    width: '100%', height: '100%', background: 'var(--accent)',
+    borderRadius: '1px', transformOrigin: 'left center',
+  },
+  stepContent: {
+    flex: 1, display: 'flex', flexDirection: 'column',
+    overflow: 'hidden', gap: '14px',
+  },
+  sectionLabel: {
+    fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em',
+    textTransform: 'uppercase', color: 'var(--muted)', lineHeight: 1.4,
+  },
+  input: {
+    width: '100%', height: '44px', borderRadius: 'var(--radius-sm)',
+    border: '1.5px solid var(--border)', padding: '0 14px',
+    fontFamily: 'var(--font-body)', fontSize: '16px', color: 'var(--fg)',
+    background: 'var(--surface)', outline: 'none', lineHeight: 1.5,
+  },
+  colorGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px',
+  },
+  colorSwatch: (c, active) => ({
+    width: '100%', aspectRatio: '1', borderRadius: '50%', background: c,
+    border: active ? '2.5px solid var(--fg)' : '2px solid transparent',
+    cursor: 'pointer',
+    transform: active ? 'scale(1.15)' : 'scale(1)',
+    boxShadow: active ? '0 0 0 3px var(--bg), 0 0 0 5px ' + c : 'none',
+  }),
+  iconGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px',
+  },
+  iconCell: (active) => ({
+    aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '18px', borderRadius: 'var(--radius-xs)', cursor: 'pointer',
+    background: active ? 'color-mix(in oklch, var(--accent) 12%, var(--bg))' : 'transparent',
+    border: active ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+  }),
+  toggleRow: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '14px 0', borderTop: '1px solid var(--border)',
+  },
+  toggleLabel: {
+    fontSize: '15px', fontWeight: 500, lineHeight: 1.4, color: 'var(--fg)',
+  },
+  toggleDesc: {
+    fontSize: '13px', color: 'var(--muted)', lineHeight: 1.4, marginTop: '2px',
+  },
+  toggle: (on) => ({
+    width: '44px', height: '26px', borderRadius: '13px', position: 'relative',
+    background: on ? 'var(--accent)' : 'var(--border)', cursor: 'pointer',
+    flexShrink: 0, border: 'none',
+  }),
+  toggleKnob: {
+    width: '20px', height: '20px', borderRadius: '50%', background: '#fff',
+    position: 'absolute', top: '3px', left: '3px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.15), 0 0 0 0.5px rgba(0,0,0,0.04)',
+  },
+  stepNav: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '14px 0 calc(16px + env(safe-area-inset-bottom, 0px))', flexShrink: 0,
+    borderTop: '1px solid var(--border)',
+  },
+  navBtnSecondary: {
+    display: 'flex', alignItems: 'center', gap: '4px',
+    height: '40px', padding: '0 14px', borderRadius: 'var(--radius-sm)',
+    background: 'transparent', color: 'var(--muted)', border: 'none',
+    fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 500,
+    cursor: 'pointer',
+  },
+  navBtnPrimary: {
+    display: 'flex', alignItems: 'center', gap: '4px',
+    height: '40px', padding: '0 18px', borderRadius: 'var(--radius-sm)',
+    background: 'var(--fg)', color: 'var(--bg)', border: 'none',
+    fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600,
+    cursor: 'pointer',
+  },
+  startBtn: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: '100%', height: '50px', borderRadius: 'var(--radius-md)',
+    background: 'var(--accent)', color: '#fff', border: 'none',
+    fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600,
+    letterSpacing: '0.01em', cursor: 'pointer', flexShrink: 0,
+  },
+
+  /* ── Scoreboard ── */
+  scoreboardPage: {
+    display: 'flex', flexDirection: 'column', height: '100%',
+    background: 'var(--bg-dark)', color: 'var(--fg-dark)',
+    paddingTop: 'env(safe-area-inset-top, 0px)',
+  },
+  timerBar: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    height: '44px', position: 'relative', flexShrink: 0, cursor: 'pointer',
+    borderBottom: '1px solid var(--border-dark)',
+  },
+  timerText: (running) => ({
+    fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 600,
+    letterSpacing: '0.02em', fontVariantNumeric: 'tabular-nums',
+    lineHeight: 1.0, color: running ? 'var(--fg-dark)' : 'var(--muted-dark)',
+  }),
+  timerDot: (running) => ({
+    width: '6px', height: '6px', borderRadius: '50%',
+    background: running ? 'var(--accent)' : 'transparent',
+    marginLeft: '8px',
+  }),
+  resetProgress: {
+    position: 'absolute', bottom: 0, left: 0, height: '2px',
+    width: '100%', background: '#d62839',
+    transformOrigin: 'left center', transform: 'scaleX(0)',
+    borderRadius: '0 1px 1px 0',
+  },
+  columnsWrap: {
+    display: 'flex', flex: 1, overflow: 'hidden',
+  },
+  teamCol: (color) => ({
+    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+    justifyContent: 'center', position: 'relative', overflow: 'hidden',
+    background: `color-mix(in oklch, ${color} 50%, var(--bg-dark))`,
+    cursor: 'pointer',
+  }),
+  columnDivider: {
+    width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch',
+  },
+  setsRow: {
+    position: 'absolute', top: '14px', display: 'flex', gap: '5px',
+  },
+  setDot: (won) => ({
+    width: '8px', height: '8px', borderRadius: '50%',
+    background: won ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.15)',
+    border: won ? 'none' : '1px solid rgba(255,255,255,0.12)',
+  }),
+  teamIcon: { fontSize: '20px', marginBottom: '4px', opacity: 0.9 },
+  teamName: {
+    fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em',
+    textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: '4px',
+    lineHeight: 1,
+  },
+  scoreNum: (isZero) => ({
+    fontFamily: 'var(--font-mono)', fontSize: 'clamp(52px, 20vw, 96px)',
+    fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 0.9,
+    fontVariantNumeric: 'tabular-nums', color: 'var(--fg-dark)',
+    opacity: isZero ? 0.3 : 1,
+  }),
+  footer: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '10px 16px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+    background: 'var(--bg-dark)', flexShrink: 0,
+    borderTop: '1px solid rgba(255,255,255,0.06)',
+  },
+  footerBtn: (variant) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+    height: '40px',
+    padding: variant === 'danger' ? '0 14px' : '0 12px',
+    background: variant === 'danger' ? 'rgba(214,40,57,0.1)' : 'transparent',
+    color: variant === 'danger' ? '#e84855' : 'rgba(255,255,255,0.55)',
+    border: variant === 'danger' ? '1px solid rgba(214,40,57,0.2)' : '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 'var(--radius-sm)',
+    fontFamily: 'var(--font-body)',
+    fontSize: '12px', fontWeight: 500, letterSpacing: '0.01em',
+    cursor: 'pointer',
+  }),
+
+  /* ── Modal ── */
+  modalOverlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+    display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    zIndex: 1000, padding: '0 0 env(safe-area-inset-bottom, 0px)',
+    opacity: 0,
+  },
+  modalBox: {
+    background: 'var(--surface-dark)', borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+    padding: '28px 24px 24px', width: '100%', maxWidth: '400px',
+    transform: 'translateY(100%)',
+  },
+  modalTitle: {
+    fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 600,
+    letterSpacing: '-0.01em', marginBottom: '6px', color: 'var(--fg-dark)',
+    lineHeight: 1.3,
+  },
+  modalDesc: {
+    fontSize: '14px', color: 'var(--muted-dark)', marginBottom: '24px',
+    lineHeight: 1.5,
+  },
+  modalActions: { display: 'flex', gap: '10px' },
+  modalCancel: {
+    flex: 1, height: '44px', borderRadius: 'var(--radius-sm)',
+    background: 'transparent', border: '1.5px solid var(--border-dark)',
+    color: 'var(--fg-dark)', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+  },
+  modalConfirm: {
+    flex: 1, height: '44px', borderRadius: 'var(--radius-sm)',
+    background: '#d62839', border: 'none', color: '#fff',
+    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+  },
+
+  /* ── Feedback flash ── */
+  flash: {
+    position: 'absolute', inset: 0, pointerEvents: 'none',
+    opacity: 0, background: 'rgba(255,255,255,0.14)',
+  },
+  flashNeg: {
+    position: 'absolute', inset: 0, pointerEvents: 'none',
+    opacity: 0, background: 'rgba(214,40,57,0.18)',
+  },
+};
+
+/* ─── App with screen transitions ─── */
+function App() {
+  const [screen, setScreen] = React.useState('home');
+  const [matchState, setMatchState] = React.useState(null);
+  const [hasSaved, setHasSaved] = React.useState(!!loadState());
+  const screenRef = React.useRef(null);
+
+  function navigateTo(target) {
+    if (REDUCED_MOTION) { setScreen(target); return; }
+    const el = screenRef.current;
+    if (!el) { setScreen(target); return; }
+    gsap.to(el, {
+      opacity: 0, y: 8, duration: dur(120), ease: 'power2.in',
+      onComplete: () => {
+        setScreen(target);
+        // entrance animated in useEffect
+      }
+    });
+  }
+
+  // Animate screen entrance after render
+  React.useEffect(() => {
+    const el = screenRef.current;
+    if (!el || REDUCED_MOTION) return;
+    gsap.fromTo(el,
+      { opacity: 0, y: -6 },
+      { opacity: 1, y: 0, duration: dur(200), ease: 'power2.out' }
+    );
+  }, [screen]);
+
+  function goToSetup() { navigateTo('setup'); }
+  function resumeMatch() {
+    const saved = loadState();
+    if (saved) { setMatchState(saved); navigateTo('scoreboard'); }
+  }
+  function startMatch(config) {
+    const state = {
+      teams: config.teams,
+      scores: [0, 0],
+      sets: [0, 0],
+      swipeUpEnabled: config.swipeUpEnabled,
+      timer: 0,
+      timerRunning: false,
+      swapped: false,
+    };
+    setMatchState(state);
+    saveState(state);
+    navigateTo('scoreboard');
+  }
+  function updateMatch(newState) {
+    setMatchState(newState);
+    saveState(newState);
+  }
+  function endMatch() {
+    clearState();
+    setMatchState(null);
+    setHasSaved(false);
+    navigateTo('home');
+  }
+
+  return (
+    <div ref={screenRef} className="gsap-screen" style={{ height: '100%', width: '100%' }}>
+      {screen === 'home' && <HomeScreen onNew={goToSetup} onResume={resumeMatch} hasSaved={hasSaved} />}
+      {screen === 'setup' && <SetupScreen onStart={startMatch} onBack={() => navigateTo('home')} />}
+      {screen === 'scoreboard' && <ScoreboardScreen state={matchState} onUpdate={updateMatch} onEnd={endMatch} />}
+    </div>
+  );
+}
+
+/* ─── Home Screen ─── */
+function HomeScreen({ onNew, onResume, hasSaved }) {
+  const isLand = useLandscape();
+  return (
+    <main style={isLand ? {
+      ...S.homePage,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: '32px',
+      padding: 'calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-right, 0px) + 28px) calc(env(safe-area-inset-bottom, 0px) + 16px) calc(env(safe-area-inset-left, 0px) + 28px)',
+    } : S.homePage} data-od-id="home-screen" aria-label="GoScore - tela inicial">
+      <div style={isLand ? { ...S.homeTop, paddingTop: 0, flex: '1 1 0', maxWidth: '280px' } : S.homeTop}>
+        <div style={S.logoRow}>
+          <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={S.logoMark}>
+            <path d="M5 3h22l-2 22-9 4-9-4-2-22z" fill="currentColor"/>
+            <path d="M11.5 23l4.5-14" stroke="var(--accent)" strokeWidth="3" strokeLinecap="square"/>
+            <path d="M16.5 23l4.5-14" stroke="var(--accent)" strokeWidth="3" strokeLinecap="square"/>
+          </svg>
+          <h1 style={S.logo}>Go<span style={S.logoAccent}>Score</span></h1>
+        </div>
+        <p style={S.subtitle}>
+          Marcador de pontos para partidas casuais. Sem cadastro, sem conexao.
+        </p>
+      </div>
+      <div style={isLand ? { ...S.homeBottom, width: '200px', flexShrink: 0 } : S.homeBottom}>
+        <button
+          style={S.ctaBtn}
+          onClick={e => { animatePress(e.currentTarget); setTimeout(onNew, 100); }}
+          data-od-id="new-match-btn"
+          aria-label="Iniciar nova partida"
+        >
+          Nova Partida
+        </button>
+        {hasSaved && (
+          <button
+            style={S.resumeBtn}
+            onClick={e => { animatePress(e.currentTarget); setTimeout(onResume, 100); }}
+            data-od-id="resume-btn"
+            aria-label="Continuar partida salva"
+          >
+            Continuar
+          </button>
+        )}
+      </div>
+    </main>
+  );
+}
+
+/* ─── Setup Screen (Step Wizard) ─── */
+function SetupScreen({ onStart, onBack }) {
+  const [step, setStep] = React.useState(0);
+  const [teams, setTeams] = React.useState([
+    { name: 'Time A', color: PRESET_COLORS[0], icon: TEAM_ICONS[0] },
+    { name: 'Time B', color: PRESET_COLORS[3], icon: TEAM_ICONS[1] },
+  ]);
+  const [swipeUp, setSwipeUp] = React.useState(true);
+  const progressRef = React.useRef(null);
+  const knobRef = React.useRef(null);
+  const stepContentRef = React.useRef(null);
+  const isLand = useLandscape();
+
+  const TOTAL_STEPS = 3;
+
+  function updateTeam(idx, field, value) {
+    setTeams(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  }
+
+  function animateStepChange(direction, callback) {
+    const el = stepContentRef.current;
+    if (!el || REDUCED_MOTION) { callback(); return; }
+    const exitX = direction > 0 ? -16 : 16;
+    const enterX = direction > 0 ? 16 : -16;
+    gsap.to(el, {
+      x: exitX, opacity: 0, duration: dur(100), ease: 'power2.in',
+      onComplete: () => {
+        callback();
+        gsap.fromTo(el,
+          { x: enterX, opacity: 0 },
+          { x: 0, opacity: 1, duration: dur(180), ease: 'power2.out' }
+        );
+      }
+    });
+  }
+
+  function nextStep() {
+    if (step < TOTAL_STEPS - 1) animateStepChange(1, () => setStep(step + 1));
+  }
+  function prevStep() {
+    if (step > 0) animateStepChange(-1, () => setStep(step - 1));
+    else onBack();
+  }
+
+  // Animate progress bar with scaleX (GPU only)
+  React.useEffect(() => {
+    const el = progressRef.current;
+    if (!el) return;
+    const pct = (step + 1) / TOTAL_STEPS;
+    gsap.to(el, { scaleX: pct, duration: dur(300), ease: 'power2.out', overwrite: true });
+  }, [step]);
+
+  // Animate toggle knob with translateX (GPU only)
+  function handleToggle() {
+    const newVal = !swipeUp;
+    setSwipeUp(newVal);
+    const el = knobRef.current;
+    if (!el) return;
+    gsap.to(el, { x: newVal ? 18 : 0, duration: dur(200), ease: 'back.out(1.4)', overwrite: true });
+  }
+
+  // Set initial knob position
+  React.useEffect(() => {
+    const el = knobRef.current;
+    if (el) gsap.set(el, { x: swipeUp ? 18 : 0 });
+  }, []);
+
+  return (
+    <div style={isLand ? {
+      ...S.setupPage,
+      padding: 'calc(8px + env(safe-area-inset-top, 0px)) calc(env(safe-area-inset-right, 0px) + 16px) 0 calc(env(safe-area-inset-left, 0px) + 16px)',
+    } : S.setupPage} data-od-id="setup-screen" role="form" aria-label="Configurar partida">
+      {/* Header */}
+      <header style={isLand ? { ...S.setupHeaderRow, marginBottom: '8px' } : S.setupHeaderRow}>
+        <button onClick={prevStep} style={S.backBtn} aria-label={step === 0 ? 'Voltar' : 'Passo anterior'}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span style={S.setupTitle}>Configurar</span>
+        <span style={S.stepCounter} aria-live="polite">{step + 1}/{TOTAL_STEPS}</span>
+      </header>
+
+      {/* Progress bar — scaleX animated by GSAP */}
+      <div style={isLand ? { ...S.progressTrack, marginBottom: '10px' } : S.progressTrack} aria-hidden="true">
+        <div ref={progressRef} style={S.progressFill} className="gsap-progress" />
+      </div>
+
+      {/* Step content */}
+      <div ref={stepContentRef} style={isLand ? { ...S.stepContent, gap: '8px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } : S.stepContent} className="gsap-screen" aria-live="polite">
+        {step < 2 && (
+          <TeamStepCard team={teams[step]} idx={step} updateTeam={updateTeam} isLandscape={isLand} />
+        )}
+
+        {step === 2 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', justifyContent: 'space-between' }}>
+            <div>
+              <div style={S.toggleRow} data-od-id="swipe-toggle">
+                <div>
+                  <span style={S.toggleLabel} id="swipe-label">Swipe +3</span>
+                  <p style={S.toggleDesc}>Arrastar para cima soma 3 pontos</p>
+                </div>
+                <div
+                  style={S.toggle(swipeUp)}
+                  onClick={handleToggle}
+                  role="switch"
+                  aria-checked={swipeUp}
+                  aria-labelledby="swipe-label"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); }}}
+                >
+                  <div ref={knobRef} style={S.toggleKnob} className="gsap-knob" />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '24px', padding: '16px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <p style={{ fontSize: '14px', color: 'var(--fg-secondary)', lineHeight: 1.5, textAlign: 'center' }}>
+                  <span style={{ fontSize: '18px' }}>{teams[0].icon}</span>{' '}
+                  <span style={{ fontWeight: 600, color: 'var(--fg)' }}>{teams[0].name}</span>
+                  {' '}vs{' '}
+                  <span style={{ fontWeight: 600, color: 'var(--fg)' }}>{teams[1].name}</span>
+                  {' '}<span style={{ fontSize: '18px' }}>{teams[1].icon}</span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              style={S.startBtn}
+              onClick={e => { animatePress(e.currentTarget); setTimeout(() => onStart({ teams, swipeUpEnabled: swipeUp }), 100); }}
+              data-od-id="start-match-btn"
+              aria-label="Iniciar partida"
+            >
+              Iniciar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      {step < 2 && (
+        <nav style={isLand ? { ...S.stepNav, padding: '8px 0 calc(8px + env(safe-area-inset-bottom, 0px))' } : S.stepNav} data-od-id="step-nav" aria-label="Navegacao entre passos">
+          <button style={S.navBtnSecondary} onClick={prevStep}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            {step === 0 ? 'Voltar' : 'Anterior'}
+          </button>
+          <button style={S.navBtnPrimary} onClick={nextStep} aria-label="Proximo passo">
+            Proximo
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+/* ─── Team Step Card ─── */
+function TeamStepCard({ team, idx, updateTeam, isLandscape }) {
+  function handleSwatchClick(el, c) {
+    updateTeam(idx, 'color', c);
+    if (!el || REDUCED_MOTION) return;
+    gsap.fromTo(el,
+      { scale: 1.3 },
+      { scale: 1.15, duration: dur(250), ease: 'elastic.out(1, 0.4)', overwrite: true }
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: isLandscape ? 'row' : 'column', gap: isLandscape ? '16px' : '12px', height: '100%' }} data-od-id={`team-card-${idx}`}>
+      <div style={isLandscape ? { flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '140px' } : {}}>
+        <div>
+          <label htmlFor={`team-name-${idx}`} style={S.sectionLabel}>Nome do time</label>
+          <input
+            id={`team-name-${idx}`}
+            style={isLandscape ? { ...S.input, height: '38px', fontSize: '15px' } : S.input}
+            value={team.name}
+            onChange={e => updateTeam(idx, 'name', e.target.value)}
+            placeholder="Ex: Falcoes"
+            maxLength={16}
+            autoComplete="off"
+          />
+        </div>
+        <fieldset style={{ border: 'none', padding: 0 }}>
+          <legend style={S.sectionLabel}>Cor</legend>
+          <div style={isLandscape ? { ...S.colorGrid, gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' } : S.colorGrid} role="radiogroup" aria-label="Selecionar cor do time">
+            {PRESET_COLORS.map(c => (
+              <div
+                key={c}
+                style={S.colorSwatch(c, team.color === c)}
+                onClick={e => handleSwatchClick(e.currentTarget, c)}
+                role="radio"
+                aria-checked={team.color === c}
+                aria-label={`Cor ${c}`}
+                tabIndex={team.color === c ? 0 : -1}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSwatchClick(e.currentTarget, c); }}}
+              />
+            ))}
+          </div>
+        </fieldset>
+      </div>
+      <fieldset style={{ border: 'none', padding: 0, flex: isLandscape ? '1' : undefined }}>
+        <legend style={S.sectionLabel}>Icone</legend>
+        <div style={isLandscape ? { ...S.iconGrid, gridTemplateColumns: 'repeat(8, 1fr)', gap: '4px' } : S.iconGrid} role="radiogroup" aria-label="Selecionar icone do time">
+          {TEAM_ICONS.map(icon => (
+            <div
+              key={icon}
+              style={S.iconCell(team.icon === icon)}
+              onClick={() => updateTeam(idx, 'icon', icon)}
+              role="radio"
+              aria-checked={team.icon === icon}
+              aria-label={`Icone ${icon}`}
+              tabIndex={team.icon === icon ? 0 : -1}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateTeam(idx, 'icon', icon); }}}
+            >
+              {icon}
+            </div>
+          ))}
+        </div>
+      </fieldset>
+    </div>
+  );
+}
+
+/* ─── Scoreboard Screen ─── */
+function ScoreboardScreen({ state, onUpdate, onEnd }) {
+  const { teams, scores, sets, swipeUpEnabled, swapped } = state;
+  const [timer, setTimer] = React.useState(state.timer || 0);
+  const [running, setRunning] = React.useState(false);
+  const [showModal, setShowModal] = React.useState(false);
+  const isLand = useLandscape();
+
+  const intervalRef = React.useRef(null);
+  const resetTimerRef = React.useRef(null);
+  const resetStartRef = React.useRef(null);
+  const resetBarRef = React.useRef(null);
+  const resetTweenRef = React.useRef(null);
+  const overlayRef = React.useRef(null);
+  const sheetRef = React.useRef(null);
+  const flashRefs = React.useRef([null, null]);
+  const scoreRefs = React.useRef([null, null]);
+
+  React.useEffect(() => {
+    if (running) {
+      intervalRef.current = setInterval(() => {
+        setTimer(t => {
+          const next = t + 1;
+          onUpdate({ ...state, timer: next, timerRunning: true });
+          return next;
+        });
+      }, 1000);
+    } else {
+      clearInterval(intervalRef.current);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [running]);
+
+  React.useEffect(() => {
+    onUpdate({ ...state, timer, timerRunning: running });
+  }, [running]);
+
+  function formatTime(s) {
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${m}:${sec}`;
+  }
+
+  /* ── Timer press: long press = reset with scaleX progress (GSAP) ── */
+  function handleTimerPressStart(e) {
+    e.preventDefault();
+    resetStartRef.current = Date.now();
+    const bar = resetBarRef.current;
+    if (bar) {
+      // Animate scaleX from 0 → 1 over 5s
+      resetTweenRef.current = gsap.fromTo(bar,
+        { scaleX: 0 },
+        { scaleX: 1, duration: dur(5000), ease: 'none',
+          onComplete: () => {
+            setTimer(0);
+            setRunning(false);
+            onUpdate({ ...state, timer: 0, timerRunning: false });
+            gsap.set(bar, { scaleX: 0 });
+            resetStartRef.current = null;
+          }
+        }
+      );
+    }
+  }
+
+  function handleTimerPressEnd(e) {
+    e.preventDefault();
+    // Kill the tween and check elapsed
+    if (resetTweenRef.current) {
+      resetTweenRef.current.kill();
+      resetTweenRef.current = null;
+    }
+    const bar = resetBarRef.current;
+    const elapsed = resetStartRef.current ? Date.now() - resetStartRef.current : 0;
+    // If we didn't reach full reset, snap bar back
+    if (bar && elapsed < 5000) {
+      gsap.to(bar, { scaleX: 0, duration: dur(120), ease: 'power2.out', overwrite: true });
+    }
+    // Short tap = toggle running
+    if (elapsed < 300) {
+      setRunning(r => !r);
+    }
+    resetStartRef.current = null;
+  }
+
+  /* ── Score flash + punch (GSAP) ── */
+  function triggerFlash(teamIdx, isPositive) {
+    const flashEl = flashRefs.current[teamIdx];
+    const scoreEl = scoreRefs.current[teamIdx];
+
+    if (flashEl && !REDUCED_MOTION) {
+      gsap.fromTo(flashEl,
+        { opacity: isPositive ? 0.7 : 0.6 },
+        { opacity: 0, duration: dur(320), ease: 'power3.out', overwrite: true }
+      );
+    }
+
+    if (scoreEl && !REDUCED_MOTION) {
+      gsap.fromTo(scoreEl,
+        { scale: 1.12 },
+        { scale: 1, duration: dur(400), ease: 'elastic.out(1, 0.5)', overwrite: true }
+      );
+    }
+  }
+
+  function addScore(teamIdx, delta) {
+    const newScores = [...scores];
+    newScores[teamIdx] = Math.max(0, newScores[teamIdx] + delta);
+    const newState = { ...state, scores: newScores, timer };
+    onUpdate(newState);
+    triggerFlash(teamIdx, delta > 0);
+  }
+
+  function swapSides() {
+    onUpdate({ ...state, swapped: !swapped, timer });
+  }
+
+  /* ── Modal open/close with GSAP ── */
+  function openModal() {
+    setShowModal(true);
+  }
+  React.useEffect(() => {
+    if (!showModal) return;
+    const overlay = overlayRef.current;
+    const sheet = sheetRef.current;
+    if (!overlay || !sheet) return;
+    if (REDUCED_MOTION) {
+      gsap.set(overlay, { opacity: 1 });
+      gsap.set(sheet, { y: 0 });
+      return;
+    }
+    gsap.to(overlay, { opacity: 1, duration: dur(200), ease: 'power2.out' });
+    gsap.fromTo(sheet,
+      { y: '100%' },
+      { y: 0, duration: dur(350), ease: 'power3.out', delay: 0.05 }
+    );
+  }, [showModal]);
+
+  function closeModal(callback) {
+    const overlay = overlayRef.current;
+    const sheet = sheetRef.current;
+    if (REDUCED_MOTION || !overlay || !sheet) {
+      setShowModal(false);
+      if (callback) callback();
+      return;
+    }
+    gsap.to(sheet, { y: '100%', duration: dur(200), ease: 'power2.in' });
+    gsap.to(overlay, { opacity: 0, duration: dur(180), delay: 0.05, ease: 'power2.in',
+      onComplete: () => { setShowModal(false); if (callback) callback(); }
+    });
+  }
+
+  function resetAll() {
+    closeModal(() => {
+      onUpdate({ ...state, scores: [0, 0], sets: [0, 0], timer: 0, timerRunning: false });
+      setTimer(0);
+      setRunning(false);
+    });
+  }
+
+  const order = swapped ? [1, 0] : [0, 1];
+
+  return (
+    <main style={isLand ? {
+      ...S.scoreboardPage,
+      paddingTop: 'env(safe-area-inset-top, 0px)',
+      paddingLeft: 'env(safe-area-inset-left, 0px)',
+      paddingRight: 'env(safe-area-inset-right, 0px)',
+    } : S.scoreboardPage} data-od-id="scoreboard-screen" aria-label="Placar da partida">
+      {/* Timer Bar */}
+      <div
+        style={isLand ? { ...S.timerBar, height: '32px' } : S.timerBar}
+        onTouchStart={handleTimerPressStart}
+        onTouchEnd={handleTimerPressEnd}
+        onMouseDown={handleTimerPressStart}
+        onMouseUp={handleTimerPressEnd}
+        onMouseLeave={handleTimerPressEnd}
+        data-od-id="timer-bar"
+        role="timer"
+        aria-label={`Cronometro: ${formatTime(timer)}. ${running ? 'Em andamento' : 'Pausado'}.`}
+        aria-live="off"
+      >
+        <span style={isLand ? { ...S.timerText(running), fontSize: '15px' } : S.timerText(running)}>{formatTime(timer)}</span>
+        <div style={S.timerDot(running)} aria-hidden="true" />
+        <div ref={resetBarRef} style={S.resetProgress} className="gsap-progress" aria-hidden="true" />
+      </div>
+
+      {/* Team Columns */}
+      <div style={S.columnsWrap}>
+        <TeamColumn
+          team={teams[order[0]]}
+          score={scores[order[0]]}
+          setsWon={sets[order[0]]}
+          swipeUpEnabled={swipeUpEnabled}
+          onScore={(delta) => addScore(order[0], delta)}
+          flashRef={el => flashRefs.current[order[0]] = el}
+          scoreRef={el => scoreRefs.current[order[0]] = el}
+          isLandscape={isLand}
+        />
+        <div style={S.columnDivider} aria-hidden="true" />
+        <TeamColumn
+          team={teams[order[1]]}
+          score={scores[order[1]]}
+          setsWon={sets[order[1]]}
+          swipeUpEnabled={swipeUpEnabled}
+          onScore={(delta) => addScore(order[1], delta)}
+          flashRef={el => flashRefs.current[order[1]] = el}
+          scoreRef={el => scoreRefs.current[order[1]] = el}
+          isLandscape={isLand}
+        />
+      </div>
+
+      {/* Footer */}
+      <footer style={isLand ? {
+        ...S.footer,
+        padding: '6px 12px',
+        paddingBottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
+      } : S.footer} data-od-id="scoreboard-footer">
+        <button style={isLand ? { ...S.footerBtn(), height: '34px', fontSize: '11px', padding: '0 10px' } : S.footerBtn()} onClick={e => { animatePress(e.currentTarget); swapSides(); }} aria-label="Inverter lados dos times">
+          <svg width={isLand ? "14" : "16"} height={isLand ? "14" : "16"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><polyline points="7 16 3 12 7 8"/><polyline points="17 8 21 12 17 16"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+          Inverter
+        </button>
+        <button style={isLand ? { ...S.footerBtn(), height: '34px', fontSize: '11px', padding: '0 10px' } : S.footerBtn()} onClick={e => { animatePress(e.currentTarget); setTimeout(onEnd, 100); }} aria-label="Sair da partida">
+          <svg width={isLand ? "14" : "16"} height={isLand ? "14" : "16"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </button>
+        <button style={isLand ? { ...S.footerBtn('danger'), height: '34px', fontSize: '11px', padding: '0 10px' } : S.footerBtn('danger')} onClick={e => { animatePress(e.currentTarget); setTimeout(openModal, 100); }} aria-label="Zerar placar">
+          <svg width={isLand ? "14" : "16"} height={isLand ? "14" : "16"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          Zerar
+        </button>
+      </footer>
+
+      {/* Reset Modal (bottom sheet) — GSAP animated */}
+      {showModal && (
+        <div
+          ref={overlayRef}
+          style={S.modalOverlay}
+          onClick={() => closeModal()}
+          data-od-id="reset-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          aria-describedby="modal-desc"
+        >
+          <div ref={sheetRef} style={S.modalBox} onClick={e => e.stopPropagation()}>
+            <h2 id="modal-title" style={S.modalTitle}>Zerar tudo?</h2>
+            <p id="modal-desc" style={S.modalDesc}>Pontos e sets voltam a zero. Nao pode ser desfeito.</p>
+            <div style={S.modalActions}>
+              <button style={S.modalCancel} onClick={() => closeModal()}>Cancelar</button>
+              <button style={S.modalConfirm} onClick={resetAll}>Zerar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
+
+/* ─── Team Column ─── */
+function TeamColumn({ team, score, setsWon, swipeUpEnabled, onScore, flashRef, scoreRef, isLandscape }) {
+  const touchStartRef = React.useRef(null);
+  const touchStartYRef = React.useRef(null);
+
+  function handleTouchStart(e) {
+    touchStartRef.current = Date.now();
+    touchStartYRef.current = e.touches[0].clientY;
+  }
+
+  function handleTouchEnd(e) {
+    const dy = touchStartYRef.current - e.changedTouches[0].clientY;
+    const elapsed = Date.now() - touchStartRef.current;
+
+    if (Math.abs(dy) > 40 && elapsed < 400) {
+      if (dy > 0 && swipeUpEnabled) { onScore(3); }
+      else if (dy < 0) { onScore(-1); }
+      return;
+    }
+    if (elapsed < 300 && Math.abs(dy) < 20) { onScore(1); }
+  }
+
+  return (
+    <div
+      style={S.teamCol(team.color)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      data-od-id={`team-col-${team.name.toLowerCase().replace(/\s+/g, '-')}`}
+      role="button"
+      aria-label={`${team.name}: ${score} pontos. Toque +1${swipeUpEnabled ? ', arraste cima +3' : ''}, arraste baixo -1`}
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onScore(1); }}}
+    >
+      {/* Flash overlay — GSAP animated */}
+      <div ref={flashRef} style={score < 0 ? S.flashNeg : S.flash} className="gsap-flash" aria-hidden="true" />
+
+      <div style={isLandscape ? { ...S.setsRow, top: '6px' } : S.setsRow} aria-label={`${setsWon} sets vencidos`}>
+        {[0, 1, 2, 3, 4].map(i => (
+          <div key={i} style={S.setDot(i < setsWon)} aria-hidden="true" />
+        ))}
+      </div>
+
+      <div style={isLandscape ? { ...S.teamIcon, fontSize: '16px', marginBottom: '2px' } : S.teamIcon} aria-hidden="true">{team.icon}</div>
+      <div style={S.teamName}>{team.name}</div>
+      <div ref={scoreRef} style={isLandscape ? {
+        ...S.scoreNum(score === 0),
+        fontSize: 'clamp(36px, 14vw, 64px)',
+      } : S.scoreNum(score === 0)} className="gsap-score" aria-live="polite" aria-atomic="true">{score}</div>
+    </div>
+  );
+}
+
+/* ─── Mount ─── */
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: oklch(98% 0.005 250);
+  --surface: oklch(100% 0 0);
+  --fg: oklch(15% 0.01 240);
+  --fg-secondary: oklch(35% 0.015 240);
+  --muted: oklch(55% 0.012 240);
+  --border: oklch(88% 0.006 240);
+  --accent: oklch(62% 0.22 145);
+
+  --bg-dark: oklch(10% 0.008 240);
+  --surface-dark: oklch(15% 0.01 240);
+  --fg-dark: oklch(96% 0.003 240);
+  --muted-dark: oklch(55% 0.01 240);
+  --border-dark: oklch(22% 0.008 240);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+[role='button'],
+[role='switch'] {
+  will-change: transform, opacity;
+}
+
+button:focus-visible,
+[role='button']:focus-visible,
+[role='switch']:focus-visible,
+[role='radio']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
