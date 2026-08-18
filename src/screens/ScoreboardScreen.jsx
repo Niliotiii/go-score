@@ -3,12 +3,14 @@ import { TimerBar } from '../components/TimerBar'
 import { TeamColumn } from '../components/TeamColumn'
 import { ResetModal } from '../components/ResetModal'
 import { ScoreboardMenu } from '../components/ScoreboardMenu'
+import { HelpModal } from '../components/HelpModal'
 
 export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
   const { teams, scores, sets, swipeUpEnabled, swapped } = state
   const [timer, setTimer] = useState(state.timer || 0)
   const [running, setRunning] = useState(state.timerRunning || false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const intervalRef = useRef(null)
@@ -71,25 +73,6 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
       data-od-id="scoreboard-screen"
       aria-label="Placar da partida"
     >
-      <header
-        className="flex items-center justify-between flex-shrink-0 h-11 px-4 border-b border-goscore-border-dark"
-        data-od-id="scoreboard-header"
-      >
-        <span className="text-[15px] font-semibold text-goscore-fg-dark">Placar</span>
-        <button
-          type="button"
-          onClick={() => setShowMenu(true)}
-          aria-label="Abrir menu de opcoes"
-          className="w-9 h-9 flex items-center justify-center rounded-sm bg-transparent text-goscore-fg-dark border-0 active:scale-95 transition-transform"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-      </header>
-
       <TimerBar
         timer={timer}
         running={running}
@@ -99,7 +82,36 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
           setRunning(false)
         }}
         isLandscape={isLandscape}
-      />
+        leftAction={
+          <button
+            type="button"
+            onClick={() => setShowHelp(true)}
+            aria-label="Como usar"
+            className="w-full h-full flex items-center justify-center rounded-sm bg-transparent text-goscore-fg-dark border-0 active:scale-95 transition-transform"
+            data-od-id="help-btn"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+        }
+      >
+        <button
+          type="button"
+          onClick={() => setShowMenu(true)}
+          aria-label="Abrir menu de opcoes"
+          className="w-full h-full flex items-center justify-center rounded-sm bg-transparent text-goscore-fg-dark border-0 active:scale-95 transition-transform"
+          data-od-id="scoreboard-menu-btn"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </TimerBar>
 
       <div className={`flex flex-1 overflow-hidden ${isLandscape ? 'flex-row' : 'flex-col'}`}>
         <TeamColumn
@@ -145,6 +157,8 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
           onClose={() => setShowMenu(false)}
         />
       )}
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
 
       {showResetConfirm && (
         <ResetModal onCancel={() => setShowResetConfirm(false)} onConfirm={() => { resetAll(); setShowResetConfirm(false) }} />

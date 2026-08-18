@@ -3,6 +3,7 @@ import { DEFAULT_TEAMS, STORAGE_KEY } from './lib/constants'
 import { loadState, saveState, clearState } from './hooks/useLocalStorage'
 import { useLandscape } from './hooks/useLandscape'
 import { HomeScreen } from './screens/HomeScreen'
+import { SetupScreen } from './screens/SetupScreen'
 import { ScoreboardScreen } from './screens/ScoreboardScreen'
 
 export default function App() {
@@ -20,8 +21,12 @@ export default function App() {
   }
 
   function startNewMatch() {
+    navigateTo('setup')
+  }
+
+  function startMatchFromSetup({ teams }) {
     const state = {
-      teams: DEFAULT_TEAMS.map((t) => ({ ...t })),
+      teams,
       scores: [0, 0],
       sets: [0, 0],
       swipeUpEnabled: true,
@@ -62,6 +67,13 @@ export default function App() {
           onNew={startNewMatch}
           onResume={resumeMatch}
           hasSaved={hasSaved}
+          isLandscape={isLandscape}
+        />
+      )}
+      {screen === 'setup' && (
+        <SetupScreen
+          onStart={startMatchFromSetup}
+          onBack={() => navigateTo('home')}
           isLandscape={isLandscape}
         />
       )}

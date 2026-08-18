@@ -176,8 +176,8 @@ export function TeamColumn({
           score === 0 ? 'opacity-30' : 'opacity-100'
         } ${
           isLandscape
-            ? 'text-[clamp(36px,14vw,64px)]'
-            : 'text-[clamp(40px,18vmin,84px)]'
+            ? 'text-[clamp(56px,24vw,104px)]'
+            : 'text-[clamp(68px,32vmin,150px)]'
         }`}
         aria-live="polite"
         aria-atomic="true"
