@@ -1,5 +1,8 @@
 export const STORAGE_KEY = 'goscore_match_state'
 
+export const DEFAULT_TARGET_SCORE = 12
+export const DEFAULT_TARGET_SETS = 2
+
 export const TEAM_ICONS = [
   '⚽', '🏀', '🏐', '🏈', '🎾', '🏓', '🏸', '⚾',
   '🥊', '🏒', '🎯', '🏆', '⭐', '🔥', '💪', '🦁'

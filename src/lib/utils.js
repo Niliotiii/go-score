@@ -7,3 +7,9 @@ export function formatTime(totalSeconds) {
 export function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
 }
+
+export function triggerHaptic(pattern = 10) {
+  if ('vibrate' in navigator) {
+    navigator.vibrate(pattern)
+  }
+}

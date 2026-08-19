@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { DEFAULT_TEAMS } from '../lib/constants'
+import { DEFAULT_TEAMS, DEFAULT_TARGET_SCORE, DEFAULT_TARGET_SETS } from '../lib/constants'
 import { TeamStepCard } from '../components/TeamStepCard'
+import { clamp } from '../lib/utils'
 
 export function SetupScreen({ onStart, onBack, isLandscape }) {
   const [step, setStep] = useState(0)
   const [teams, setTeams] = useState(() => DEFAULT_TEAMS.map((t) => ({ ...t })))
+  const [targetScore, setTargetScore] = useState(DEFAULT_TARGET_SCORE)
+  const [targetSets, setTargetSets] = useState(DEFAULT_TARGET_SETS)
 
   const TOTAL_STEPS = 3
 
@@ -81,7 +84,7 @@ export function SetupScreen({ onStart, onBack, isLandscape }) {
 
         {step === 2 && (
           <div className="flex flex-col h-full min-h-0">
-            <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center">
+            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4">
               <div className="w-full p-4 bg-goscore-surface rounded-sm border border-goscore-border">
                 <p className="text-sm text-goscore-fg-secondary leading-relaxed text-center">
                   <span className="text-lg">{teams[0].icon}</span>{' '}
@@ -91,12 +94,58 @@ export function SetupScreen({ onStart, onBack, isLandscape }) {
                   {' '}<span className="text-lg">{teams[1].icon}</span>
                 </p>
               </div>
+
+              <div className="flex items-center justify-between py-3 border-t border-goscore-border">
+                <span className="text-[15px] font-medium text-goscore-fg">Pontos por set</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTargetScore((v) => clamp(v - 1, 1, 99))}
+                    aria-label="Diminuir pontos por set"
+                    className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center font-mono text-[15px] font-semibold">{targetScore}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTargetScore((v) => clamp(v + 1, 1, 99))}
+                    aria-label="Aumentar pontos por set"
+                    className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-t border-goscore-border">
+                <span className="text-[15px] font-medium text-goscore-fg">Sets para vencer</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTargetSets((v) => clamp(v - 1, 1, 5))}
+                    aria-label="Diminuir sets para vencer"
+                    className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center font-mono text-[15px] font-semibold">{targetSets}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTargetSets((v) => clamp(v + 1, 1, 5))}
+                    aria-label="Aumentar sets para vencer"
+                    className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="flex-shrink-0 pt-4">
               <button
                 type="button"
-                onClick={() => onStart({ teams })}
+                onClick={() => onStart({ teams, targetScore, targetSets })}
                 data-od-id="start-match-btn"
                 aria-label="Iniciar partida"
                 className="w-full h-[50px] rounded-md bg-goscore-accent text-white font-semibold text-[15px] tracking-wide flex items-center justify-center active:scale-[0.98] transition-transform"

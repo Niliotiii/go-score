@@ -1,4 +1,4 @@
-import { formatTime } from '../lib/utils'
+import { formatTime, triggerHaptic } from '../lib/utils'
 import { useLongPress } from '../hooks/useLongPress'
 
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -8,10 +8,14 @@ export function TimerBar({ timer, running, onToggle, onReset, isLandscape, leftA
     onPressStart: () => {},
     onPressEnd: (_e, elapsed) => {
       if (elapsed >= 5000) {
+        triggerHaptic(30)
         onReset()
       }
     },
-    onShortPress: onToggle,
+    onShortPress: () => {
+      triggerHaptic(10)
+      onToggle()
+    },
     duration: 5000,
   })
 

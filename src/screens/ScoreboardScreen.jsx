@@ -4,15 +4,18 @@ import { TeamColumn } from '../components/TeamColumn'
 import { ResetModal } from '../components/ResetModal'
 import { ScoreboardMenu } from '../components/ScoreboardMenu'
 import { HelpModal } from '../components/HelpModal'
+import { VictoryModal } from '../components/VictoryModal'
 import { useWakeLock } from '../hooks/useWakeLock'
+import { triggerHaptic } from '../lib/utils'
 
 export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
-  const { teams, scores, sets, swipeUpEnabled, swapped } = state
+  const { teams, scores, sets, targetScore, targetSets, swipeUpEnabled, swapped } = state
   const [timer, setTimer] = useState(state.timer || 0)
   const [running, setRunning] = useState(state.timerRunning || false)
   const [showMenu, setShowMenu] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showVictory, setShowVictory] = useState(null)
 
   useWakeLock(true)
 
@@ -42,8 +45,27 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
   }, [running, timer])
 
   function addScore(teamIdx, delta) {
+    const nextScore = Math.max(0, scores[teamIdx] + delta)
+    if (nextScore === scores[teamIdx]) return
+
     const newScores = [...scores]
-    newScores[teamIdx] = Math.max(0, newScores[teamIdx] + delta)
+    newScores[teamIdx] = nextScore
+
+    const effectiveTarget = targetScore || 12
+    if (nextScore >= effectiveTarget) {
+      const newSets = [...sets]
+      newSets[teamIdx] = newSets[teamIdx] + 1
+      if (newSets[teamIdx] >= (targetSets || 2)) {
+        onUpdate({ ...state, scores: [0, 0], sets: newSets })
+        setShowVictory(teams[teamIdx])
+        triggerHaptic([50, 100, 50])
+        return
+      }
+      onUpdate({ ...state, scores: [0, 0], sets: newSets })
+      triggerHaptic([30, 60, 30])
+      return
+    }
+
     onUpdate({ ...state, scores: newScores })
   }
 
@@ -51,6 +73,7 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
     const newSets = [...sets]
     newSets[teamIdx] = Math.min(5, Math.max(0, newSets[teamIdx] + delta))
     onUpdate({ ...state, sets: newSets })
+    triggerHaptic(20)
   }
 
   function swapSides() {
@@ -61,6 +84,20 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
     setTimer(0)
     setRunning(false)
     onUpdate({ ...state, scores: [0, 0], sets: [0, 0], timer: 0, timerRunning: false })
+  }
+
+  function rematch() {
+    setTimer(0)
+    setRunning(false)
+    setShowVictory(null)
+    onUpdate({
+      ...state,
+      scores: [0, 0],
+      sets: [0, 0],
+      timer: 0,
+      timerRunning: false,
+      swapped: !state.swapped,
+    })
   }
 
   function toggleSwipeUp() {
@@ -167,6 +204,17 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
 
       {showResetConfirm && (
         <ResetModal onCancel={() => setShowResetConfirm(false)} onConfirm={() => { resetAll(); setShowResetConfirm(false) }} />
+      )}
+
+      {showVictory && (
+        <VictoryModal
+          team={showVictory}
+          onRematch={rematch}
+          onExit={() => {
+            setShowVictory(null)
+            onEnd()
+          }}
+        />
       )}
     </main>
   )

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSwipe } from '../hooks/useSwipe'
+import { triggerHaptic } from '../lib/utils'
 
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -60,6 +61,7 @@ export function TeamColumn({
     if (elapsed < 600 && Math.abs(dy) < 20 && !setPointerRef.current.handled) {
       setPointerRef.current.handled = true
       onSetChange?.(1)
+      triggerHaptic(20)
     }
   }
 
@@ -73,8 +75,11 @@ export function TeamColumn({
   function handleScore(delta) {
     if (delta === 3 && !swipeUpEnabled) return
     const adjusted = delta === -1 && score === 0 ? 0 : delta
-    onScore(adjusted)
-    if (adjusted !== 0) triggerFeedback(adjusted > 0)
+    if (adjusted !== 0) {
+      onScore(adjusted)
+      triggerFeedback(adjusted > 0)
+      triggerHaptic(adjusted > 0 ? 15 : 25)
+    }
   }
 
   function triggerFeedback(positive) {
@@ -179,7 +184,7 @@ export function TeamColumn({
       <div
         ref={scoreRef}
         className={`font-mono font-bold tracking-score tabular-nums text-goscore-fg-dark leading-none ${
-          score === 0 ? 'opacity-30' : 'opacity-100'
+          score === 0 ? 'text-white/55' : 'text-goscore-fg-dark'
         } ${
           isLandscape
             ? 'text-[clamp(56px,24vw,104px)]'

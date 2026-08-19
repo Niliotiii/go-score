@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DEFAULT_TEAMS, STORAGE_KEY } from './lib/constants'
+import { DEFAULT_TEAMS, DEFAULT_TARGET_SCORE, DEFAULT_TARGET_SETS, STORAGE_KEY } from './lib/constants'
 import { loadState, saveState, clearState } from './hooks/useLocalStorage'
 import { useLandscape } from './hooks/useLandscape'
 import { HomeScreen } from './screens/HomeScreen'
@@ -24,11 +24,13 @@ export default function App() {
     navigateTo('setup')
   }
 
-  function startMatchFromSetup({ teams }) {
+  function startMatchFromSetup({ teams, targetScore, targetSets }) {
     const state = {
       teams,
       scores: [0, 0],
       sets: [0, 0],
+      targetScore,
+      targetSets,
       swipeUpEnabled: true,
       timer: 0,
       timerRunning: false,
