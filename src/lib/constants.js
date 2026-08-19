@@ -4,8 +4,8 @@ export const DEFAULT_TARGET_SCORE = 12
 export const DEFAULT_TARGET_SETS = 2
 
 export const TEAM_ICONS = [
-  '⚽', '🏀', '🏐', '🏈', '🎾', '🏓', '🏸', '⚾',
-  '🥊', '🏒', '🎯', '🏆', '⭐', '🔥', '💪', '🦁'
+  '🦁', '🐯', '🐻', '🐼', '🦊', '🐺', '🦅', '🦉',
+  '🐍', '🦈', '🐊', '🐘', '🦒', '🦓', '🦍', '🐆'
 ]
 
 export const PRESET_COLORS = [
