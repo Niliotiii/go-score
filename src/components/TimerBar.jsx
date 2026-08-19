@@ -1,4 +1,5 @@
 import { formatTime, triggerHaptic } from '../lib/utils'
+import { playClickSound } from '../lib/audio'
 import { useLongPress } from '../hooks/useLongPress'
 
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -9,11 +10,13 @@ export function TimerBar({ timer, running, onToggle, onReset, isLandscape, leftA
     onPressEnd: (_e, elapsed) => {
       if (elapsed >= 5000) {
         triggerHaptic(30)
+        playClickSound('set')
         onReset()
       }
     },
     onShortPress: () => {
       triggerHaptic(10)
+      playClickSound('point')
       onToggle()
     },
     duration: 5000,

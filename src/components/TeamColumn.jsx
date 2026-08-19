@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSwipe } from '../hooks/useSwipe'
 import { triggerHaptic } from '../lib/utils'
+import { playClickSound } from '../lib/audio'
 
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -62,6 +63,7 @@ export function TeamColumn({
       setPointerRef.current.handled = true
       onSetChange?.(1)
       triggerHaptic(20)
+      playClickSound('set')
     }
   }
 
@@ -79,22 +81,23 @@ export function TeamColumn({
       onScore(adjusted)
       triggerFeedback(adjusted > 0)
       triggerHaptic(adjusted > 0 ? 15 : 25)
+      playClickSound('point')
     }
   }
 
   function triggerFeedback(positive) {
     setFlash({ active: true, positive })
-    setTimeout(() => setFlash((f) => ({ ...f, active: false })), 320)
+    setTimeout(() => setFlash((f) => ({ ...f, active: false })), 360)
 
     if (scoreRef.current && !REDUCED_MOTION) {
-      scoreRef.current.style.transform = 'scale(1.12)'
-      scoreRef.current.style.transition = 'transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+      scoreRef.current.style.transform = 'scale(1.18)'
+      scoreRef.current.style.transition = 'transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1)'
       requestAnimationFrame(() => {
         setTimeout(() => {
           if (scoreRef.current) {
             scoreRef.current.style.transform = 'scale(1)'
           }
-        }, 50)
+        }, 120)
       })
     }
   }

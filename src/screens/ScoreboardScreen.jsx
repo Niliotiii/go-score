@@ -7,6 +7,7 @@ import { HelpModal } from '../components/HelpModal'
 import { VictoryModal } from '../components/VictoryModal'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { triggerHaptic } from '../lib/utils'
+import { playClickSound } from '../lib/audio'
 
 export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
   const { teams, scores, sets, targetScore, targetSets, swipeUpEnabled, swapped } = state
@@ -51,14 +52,14 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
     const newScores = [...scores]
     newScores[teamIdx] = nextScore
 
-    const effectiveTarget = targetScore || 12
-    if (nextScore >= effectiveTarget) {
+    if (targetScore > 0 && nextScore >= targetScore) {
       const newSets = [...sets]
       newSets[teamIdx] = newSets[teamIdx] + 1
-      if (newSets[teamIdx] >= (targetSets || 2)) {
+      if (targetSets > 0 && newSets[teamIdx] >= targetSets) {
         onUpdate({ ...state, scores: [0, 0], sets: newSets })
         setShowVictory(teams[teamIdx])
         triggerHaptic([50, 100, 50])
+        playClickSound('win')
         return
       }
       onUpdate({ ...state, scores: [0, 0], sets: newSets })

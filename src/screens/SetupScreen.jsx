@@ -100,16 +100,16 @@ export function SetupScreen({ onStart, onBack, isLandscape }) {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setTargetScore((v) => clamp(v - 1, 1, 99))}
+                    onClick={() => setTargetScore((v) => clamp(v - 1, 0, 99))}
                     aria-label="Diminuir pontos por set"
                     className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center font-mono text-[15px] font-semibold">{targetScore}</span>
+                  <span className="w-8 text-center font-mono text-[15px] font-semibold">{targetScore === 0 ? '∞' : targetScore}</span>
                   <button
                     type="button"
-                    onClick={() => setTargetScore((v) => clamp(v + 1, 1, 99))}
+                    onClick={() => setTargetScore((v) => clamp(v + 1, 0, 99))}
                     aria-label="Aumentar pontos por set"
                     className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
                   >
@@ -123,16 +123,16 @@ export function SetupScreen({ onStart, onBack, isLandscape }) {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setTargetSets((v) => clamp(v - 1, 1, 5))}
+                    onClick={() => setTargetSets((v) => clamp(v - 1, 0, 5))}
                     aria-label="Diminuir sets para vencer"
                     className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center font-mono text-[15px] font-semibold">{targetSets}</span>
+                  <span className="w-8 text-center font-mono text-[15px] font-semibold">{targetSets === 0 ? '∞' : targetSets}</span>
                   <button
                     type="button"
-                    onClick={() => setTargetSets((v) => clamp(v + 1, 1, 5))}
+                    onClick={() => setTargetSets((v) => clamp(v + 1, 0, 5))}
                     aria-label="Aumentar sets para vencer"
                     className="w-9 h-9 rounded-sm bg-goscore-surface border border-goscore-border text-goscore-fg flex items-center justify-center active:scale-95 transition-transform"
                   >
