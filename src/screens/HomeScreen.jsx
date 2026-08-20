@@ -32,14 +32,14 @@ export function HomeScreen({ onNew, onResume, hasSaved, isLandscape }) {
       <div
         className={`flex flex-col justify-end gap-2.5 ${
           isLandscape ? 'w-[200px] flex-shrink-0' : 'mt-auto'
-        } ${hasSaved ? 'h-[90px]' : 'h-10'}`}
+        } ${hasSaved ? 'h-[110px]' : 'h-[50px]'}`}
       >
         <button
           type="button"
           onClick={onNew}
           data-od-id="new-match-btn"
           aria-label="Iniciar nova partida"
-          className="w-full h-10 rounded-md bg-goscore-fg text-goscore-bg font-semibold text-[15px] tracking-wide flex items-center justify-center active:scale-[0.98] transition-transform"
+          className="w-full h-[50px] rounded-md bg-goscore-fg text-goscore-bg font-semibold text-[15px] tracking-wide flex items-center justify-center active:scale-[0.98] transition-transform"
         >
           Nova Partida
         </button>
@@ -49,7 +49,7 @@ export function HomeScreen({ onNew, onResume, hasSaved, isLandscape }) {
             onClick={onResume}
             data-od-id="resume-btn"
             aria-label="Continuar partida salva"
-            className="w-full h-10 rounded-md bg-transparent text-goscore-fg font-medium text-[15px] tracking-wide border border-goscore-border flex items-center justify-center active:scale-[0.98] transition-transform"
+            className="w-full h-[50px] rounded-md bg-transparent text-goscore-fg font-medium text-[15px] tracking-wide border-[1.5px] border-goscore-border flex items-center justify-center active:scale-[0.98] transition-transform"
           >
             Continuar
           </button>

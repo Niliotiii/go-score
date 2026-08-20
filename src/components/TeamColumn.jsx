@@ -6,7 +6,7 @@ import { playClickSound } from '../lib/audio'
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function mixWithDark(color) {
-  return `color-mix(in srgb, ${color} 80%, var(--bg-dark))`
+  return `color-mix(in oklch, ${color} 50%, var(--bg-dark))`
 }
 
 export function TeamColumn({
@@ -190,8 +190,8 @@ export function TeamColumn({
           score === 0 ? 'text-white/55' : 'text-goscore-fg-dark'
         } ${
           isLandscape
-            ? 'text-[clamp(56px,24vw,104px)]'
-            : 'text-[clamp(68px,32vmin,150px)]'
+            ? 'text-[clamp(36px,14vw,64px)]'
+            : 'text-[clamp(52px,20vw,96px)]'
         }`}
         aria-live="polite"
         aria-atomic="true"

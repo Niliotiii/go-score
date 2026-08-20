@@ -63,30 +63,32 @@ export default function App() {
   }
 
   return (
-    <div className="h-full w-full">
-      {screen === 'home' && (
-        <HomeScreen
-          onNew={startNewMatch}
-          onResume={resumeMatch}
-          hasSaved={hasSaved}
-          isLandscape={isLandscape}
-        />
-      )}
-      {screen === 'setup' && (
-        <SetupScreen
-          onStart={startMatchFromSetup}
-          onBack={() => navigateTo('home')}
-          isLandscape={isLandscape}
-        />
-      )}
-      {screen === 'scoreboard' && matchState && (
-        <ScoreboardScreen
-          state={matchState}
-          onUpdate={updateMatch}
-          onEnd={endMatch}
-          isLandscape={isLandscape}
-        />
-      )}
+    <div className="h-full w-full flex items-center justify-center bg-goscore-bg-dark">
+      <div className="h-full w-full max-w-[430px] mx-auto relative overflow-hidden shadow-2xl">
+        {screen === 'home' && (
+          <HomeScreen
+            onNew={startNewMatch}
+            onResume={resumeMatch}
+            hasSaved={hasSaved}
+            isLandscape={isLandscape}
+          />
+        )}
+        {screen === 'setup' && (
+          <SetupScreen
+            onStart={startMatchFromSetup}
+            onBack={() => navigateTo('home')}
+            isLandscape={isLandscape}
+          />
+        )}
+        {screen === 'scoreboard' && matchState && (
+          <ScoreboardScreen
+            state={matchState}
+            onUpdate={updateMatch}
+            onEnd={endMatch}
+            isLandscape={isLandscape}
+          />
+        )}
+      </div>
     </div>
   )
 }

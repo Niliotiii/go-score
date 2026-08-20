@@ -26,7 +26,7 @@ export function TimerBar({ timer, running, onToggle, onReset, isLandscape, leftA
     <div
       data-od-id="timer-bar"
       className={`relative flex items-center justify-between flex-shrink-0 border-b border-goscore-border-dark px-6 ${
-        isLandscape ? 'h-11' : 'h-14'
+        isLandscape ? 'h-8' : 'h-11'
       }`}
     >
       {leftAction ? (
@@ -50,7 +50,7 @@ export function TimerBar({ timer, running, onToggle, onReset, isLandscape, leftA
         <span
           className={`font-mono font-semibold tracking-timer tabular-nums leading-none ${
             running ? 'text-goscore-fg-dark' : 'text-goscore-muted-dark'
-          } ${isLandscape ? 'text-xl' : 'text-2xl'}`}
+          } ${isLandscape ? 'text-[15px]' : 'text-lg'}`}
         >
           {formatTime(timer)}
         </span>
