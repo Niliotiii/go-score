@@ -62,7 +62,7 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider style={{ flex: 1 }}>
       {screen === 'home' && (
         <HomeScreen
           hasSaved={hasSaved}
