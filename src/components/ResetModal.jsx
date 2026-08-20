@@ -50,7 +50,7 @@ export function ResetModal({ onCancel, onConfirm }) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 px-0 pb-0"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 px-0 pb-0 md:px-4 md:pb-0"
       style={{ opacity: REDUCED_MOTION ? 1 : 0 }}
       onClick={() => closeAnd(onCancel)}
       data-od-id="reset-modal"
@@ -61,7 +61,7 @@ export function ResetModal({ onCancel, onConfirm }) {
     >
       <div
         ref={sheetRef}
-        className="w-full max-w-[400px] bg-goscore-surface-dark rounded-t-lg p-7 pb-6"
+        className="w-full max-w-[400px] bg-goscore-surface-dark rounded-t-lg md:rounded-lg p-7 pb-6"
         style={{ transform: REDUCED_MOTION ? 'translateY(0)' : 'translateY(100%)' }}
         onClick={(e) => e.stopPropagation()}
       >

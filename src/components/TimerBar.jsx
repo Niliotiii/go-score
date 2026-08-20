@@ -50,7 +50,7 @@ export function TimerBar({ timer, running, onToggle, onReset, isLandscape, leftA
         <span
           className={`font-mono font-semibold tracking-timer tabular-nums leading-none ${
             running ? 'text-goscore-fg-dark' : 'text-goscore-muted-dark'
-          } ${isLandscape ? 'text-[15px]' : 'text-lg'}`}
+          } ${isLandscape ? 'text-[15px]' : 'text-lg md:text-xl'}`}
         >
           {formatTime(timer)}
         </span>

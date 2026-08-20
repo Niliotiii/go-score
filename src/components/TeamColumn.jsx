@@ -176,12 +176,12 @@ export function TeamColumn({
       </div>
 
       <div
-        className={`mb-1 opacity-90 ${isLandscape ? 'text-base mb-0.5' : 'text-xl'}`}
+        className={`mb-1 opacity-90 ${isLandscape ? 'text-base mb-0.5' : 'text-xl md:text-2xl'}`}
         aria-hidden="true"
       >
         {team.icon}
       </div>
-      <div className="text-[11px] font-semibold tracking-label uppercase text-white/55 mb-1 leading-none">
+      <div className="text-[11px] md:text-xs font-semibold tracking-label uppercase text-white/55 mb-1 leading-none">
         {team.name}
       </div>
       <div
@@ -191,7 +191,7 @@ export function TeamColumn({
         } ${
           isLandscape
             ? 'text-[clamp(36px,14vw,64px)]'
-            : 'text-[clamp(52px,20vw,96px)]'
+            : 'text-[clamp(52px,20vw,96px)] md:text-[clamp(64px,10vw,120px)]'
         }`}
         aria-live="polite"
         aria-atomic="true"

@@ -156,7 +156,7 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
         </button>
       </TimerBar>
 
-      <div className={`flex flex-1 overflow-hidden ${isLandscape ? 'flex-row' : 'flex-col'}`}>
+      <div className={`flex flex-1 overflow-hidden ${isLandscape ? 'flex-row' : 'flex-col md:flex-row'}`}>
         <TeamColumn
           team={teams[order[0]]}
           score={scores[order[0]]}
@@ -166,7 +166,7 @@ export function ScoreboardScreen({ state, onUpdate, onEnd, isLandscape }) {
           onSetChange={(delta) => changeSet(order[0], delta)}
           isLandscape={isLandscape}
         />
-        <div className={`bg-white/5 self-stretch ${isLandscape ? 'w-px' : 'h-px'}`} aria-hidden="true" />
+        <div className={`bg-white/5 self-stretch ${isLandscape ? 'w-px' : 'h-px md:h-auto md:w-px'}`} aria-hidden="true" />
         <TeamColumn
           team={teams[order[1]]}
           score={scores[order[1]]}
