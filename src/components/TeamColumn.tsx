@@ -11,6 +11,9 @@ interface TeamColumnProps {
   score: number;
   setsWon: number;
   swipeUpEnabled: boolean;
+  targetScore: number;
+  deuceEnabled: boolean;
+  opponentScore: number;
   onScore: (delta: number) => void;
   onSetChange: (delta: number) => void;
 }
@@ -20,6 +23,9 @@ export function TeamColumn({
   score,
   setsWon,
   swipeUpEnabled,
+  targetScore,
+  deuceEnabled,
+  opponentScore,
   onScore,
   onSetChange,
 }: TeamColumnProps) {
@@ -133,6 +139,13 @@ export function TeamColumn({
             {
               transform: [{ scale: scoreScale }],
               fontSize: Math.min(Dimensions.get('window').width * 0.18, 160),
+              color: (() => {
+                if (targetScore <= 0) return colors.fgDark;
+                const deuceThreshold = targetScore - 1;
+                const isDeuce = deuceEnabled && score >= deuceThreshold && opponentScore >= deuceThreshold;
+                const effectiveTarget = isDeuce ? deuceThreshold + 3 : targetScore;
+                return score === effectiveTarget - 1 ? '#E8B93F' : colors.fgDark;
+              })(),
             },
             score === 0 && styles.scoreZero,
           ]}
@@ -140,6 +153,20 @@ export function TeamColumn({
         >
           {score}
         </Animated.Text>
+
+        {(() => {
+          if (targetScore <= 0) return null;
+          const deuceThreshold = targetScore - 1;
+          const isDeuce = deuceEnabled && score >= deuceThreshold && opponentScore >= deuceThreshold;
+          const effectiveTarget = isDeuce ? deuceThreshold + 3 : targetScore;
+          if (score === effectiveTarget - 1) {
+            return <Text style={styles.setPointBadge}>SET POINT</Text>;
+          }
+          if (isDeuce && score < effectiveTarget - 1) {
+            return <Text style={styles.deuceBadge}>VAI A 3</Text>;
+          }
+          return null;
+        })()}
       </View>
     </View>
   );
@@ -207,5 +234,21 @@ const styles = StyleSheet.create({
   },
   scoreZero: {
     opacity: 0.45,
+  },
+  setPointBadge: {
+    marginTop: spacing.sm,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: '#E8B93F',
+    textTransform: 'uppercase',
+  },
+  deuceBadge: {
+    marginTop: spacing.sm,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
   },
 });

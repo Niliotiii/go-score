@@ -18,7 +18,7 @@ interface ScoreboardScreenProps {
 }
 
 export function ScoreboardScreen({ state, onUpdate, onEnd }: ScoreboardScreenProps) {
-  const { teams, scores, sets, targetScore, targetSets, swipeUpEnabled, swapped } = state;
+  const { teams, scores, sets, targetScore, targetSets, swipeUpEnabled, deuceEnabled, swapped } = state;
   const insets = useSafeAreaInsets();
   const [timer, setTimer] = useState(state.timer || 0);
   const [running, setRunning] = useState(state.timerRunning || false);
@@ -62,21 +62,30 @@ export function ScoreboardScreen({ state, onUpdate, onEnd }: ScoreboardScreenPro
 
     playClickSound('point');
 
-    if (targetScore > 0 && nextScore >= targetScore) {
-      const newSets: [number, number] = [...sets];
-      newSets[teamIdx] = newSets[teamIdx] + 1;
-      playClickSound('set');
+    if (targetScore > 0) {
+      const otherIdx = teamIdx === 0 ? 1 : 0;
+      const deuceThreshold = targetScore - 1;
+      const isDeuce = deuceEnabled && scores[otherIdx] >= deuceThreshold && scores[teamIdx] >= deuceThreshold;
 
-      if (targetSets > 0 && newSets[teamIdx] >= targetSets) {
+      // No modo "Vai a 3": a partir do empate no threshold, precisa chegar a threshold + 3
+      const effectiveTarget = isDeuce ? deuceThreshold + 3 : targetScore;
+
+      if (nextScore >= effectiveTarget) {
+        const newSets: [number, number] = [...sets];
+        newSets[teamIdx] = newSets[teamIdx] + 1;
+        playClickSound('set');
+
+        if (targetSets > 0 && newSets[teamIdx] >= targetSets) {
+          onUpdate({ ...state, scores: [0, 0], sets: newSets });
+          setShowVictory(teams[teamIdx]);
+          triggerHaptic('heavy');
+          playClickSound('win');
+          return;
+        }
         onUpdate({ ...state, scores: [0, 0], sets: newSets });
-        setShowVictory(teams[teamIdx]);
-        triggerHaptic('heavy');
-        playClickSound('win');
+        triggerHaptic('medium');
         return;
       }
-      onUpdate({ ...state, scores: [0, 0], sets: newSets });
-      triggerHaptic('medium');
-      return;
     }
 
     onUpdate({ ...state, scores: newScores });
@@ -153,6 +162,9 @@ export function ScoreboardScreen({ state, onUpdate, onEnd }: ScoreboardScreenPro
           score={scores[order[0]]}
           setsWon={sets[order[0]]}
           swipeUpEnabled={swipeUpEnabled}
+          targetScore={targetScore}
+          deuceEnabled={deuceEnabled}
+          opponentScore={scores[order[1]]}
           onScore={(delta) => addScore(order[0], delta)}
           onSetChange={(delta) => changeSet(order[0], delta)}
         />
@@ -162,6 +174,9 @@ export function ScoreboardScreen({ state, onUpdate, onEnd }: ScoreboardScreenPro
           score={scores[order[1]]}
           setsWon={sets[order[1]]}
           swipeUpEnabled={swipeUpEnabled}
+          targetScore={targetScore}
+          deuceEnabled={deuceEnabled}
+          opponentScore={scores[order[0]]}
           onScore={(delta) => addScore(order[1], delta)}
           onSetChange={(delta) => changeSet(order[1], delta)}
         />

@@ -11,6 +11,7 @@ export interface MatchState {
   targetScore: number;
   targetSets: number;
   swipeUpEnabled: boolean;
+  deuceEnabled: boolean;
   timer: number;
   timerRunning: boolean;
   swapped: boolean;

@@ -8,7 +8,7 @@ import { colors, spacing, radius, type as typeTokens } from '../theme/tokens';
 import type { Team } from '../types';
 
 interface SetupScreenProps {
-  onStart: (config: { teams: [Team, Team]; targetScore: number; targetSets: number; swipeUpEnabled: boolean }) => void;
+  onStart: (config: { teams: [Team, Team]; targetScore: number; targetSets: number; swipeUpEnabled: boolean; deuceEnabled: boolean }) => void;
   onBack: () => void;
 }
 
@@ -22,6 +22,7 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
   const [targetScore, setTargetScore] = useState(DEFAULT_TARGET_SCORE);
   const [targetSets, setTargetSets] = useState(DEFAULT_TARGET_SETS);
   const [swipeUpEnabled, setSwipeUpEnabled] = useState(true);
+  const [deuceEnabled, setDeuceEnabled] = useState(false);
 
   const TOTAL_STEPS = 3;
 
@@ -97,6 +98,21 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
               </View>
             </Pressable>
 
+            <Pressable
+              style={styles.settingRow}
+              onPress={() => setDeuceEnabled((v) => !v)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: deuceEnabled }}
+            >
+              <View>
+                <Text style={styles.settingLabel}>Vai a 3</Text>
+                <Text style={styles.settingHint}>No empate perto do fim, ganha quem fizer 3 primeiro</Text>
+              </View>
+              <View style={[styles.toggle, deuceEnabled && styles.toggleOn]}>
+                <View style={[styles.toggleKnob, deuceEnabled && styles.toggleKnobOn]} />
+              </View>
+            </Pressable>
+
             <View style={styles.settingRow}>
               <Text style={styles.settingLabel}>Pontos por set</Text>
               <View style={styles.stepper}>
@@ -127,7 +143,7 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
 
             <Pressable
               style={styles.startBtn}
-              onPress={() => onStart({ teams, targetScore, targetSets, swipeUpEnabled })}
+              onPress={() => onStart({ teams, targetScore, targetSets, swipeUpEnabled, deuceEnabled })}
               accessibilityLabel="Iniciar partida"
             >
               <Text style={styles.startBtnText}>Iniciar</Text>

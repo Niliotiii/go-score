@@ -22,7 +22,7 @@ export default function App() {
     });
   }, []);
 
-  const startMatch = useCallback((config: { teams: [Team, Team]; targetScore: number; targetSets: number; swipeUpEnabled: boolean }) => {
+  const startMatch = useCallback((config: { teams: [Team, Team]; targetScore: number; targetSets: number; swipeUpEnabled: boolean; deuceEnabled: boolean }) => {
     const state: MatchState = {
       teams: config.teams,
       scores: [0, 0],
@@ -30,6 +30,7 @@ export default function App() {
       targetScore: config.targetScore,
       targetSets: config.targetSets,
       swipeUpEnabled: config.swipeUpEnabled,
+      deuceEnabled: config.deuceEnabled,
       timer: 0,
       timerRunning: false,
       swapped: false,
